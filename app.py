@@ -392,7 +392,7 @@ st.markdown("""
 <div class="hero">
     <div class="hero-badge">🌾 AI-Powered Plant Pathology</div>
     <h1 class="hero-title">RiceGuard AI</h1>
-    <p class="hero-subtitle" style="text-align:center; margin-left:auto; margin-right:auto;">
+    <p class="hero-subtitle">
         Upload a rice leaf photo and get instant disease diagnosis
         powered by deep learning
     </p>
@@ -494,7 +494,7 @@ with right_col:
         """, unsafe_allow_html=True)
 
     else:
-        # ── Preprocess & Predict ──
+        # ── Preprocess ──
         img_array = np.array(image)
         if img_array.shape[-1] == 4:
             img_array = img_array[:, :, :3]
@@ -503,50 +503,47 @@ with right_col:
         img_input   = img_resized / 255.0
         img_input   = np.expand_dims(img_input, axis=0)
 
-        # ── Green Check ──────────────────────────
-        def is_rice_leaf(img_array):
-            # Convert to float
-            img_f = img_array.astype(float)
-            R = img_f[:, :, 0]
-            G = img_f[:, :, 1]
-            B = img_f[:, :, 2]
-
-            # Green pixel condition:
-            # Green channel must be dominant
-            green_mask = (G > R * 0.9) & (G > B * 0.9) & (G > 40)
+        # ── Green Leaf Check ──
+        def is_rice_leaf(arr):
+            f = arr.astype(float)
+            R, G, B = f[:,:,0], f[:,:,1], f[:,:,2]
+            green_mask  = (G > R * 0.9) & (G > B * 0.9) & (G > 40)
             green_ratio = green_mask.sum() / green_mask.size
-            return green_ratio, green_ratio >= 0.15  # 15% must be green
+            return green_ratio, green_ratio >= 0.15
 
         green_ratio, is_leaf = is_rice_leaf(img_array)
 
         if not is_leaf:
+            # ── Not a leaf warning ──
             st.markdown(f"""
             <div style="
-                background: rgba(239, 68, 68, 0.08);
-                border: 1px solid rgba(239, 68, 68, 0.3);
+                background: rgba(239,68,68,0.08);
+                border: 1px solid rgba(239,68,68,0.3);
                 border-radius: 16px;
-                padding: 2rem;
+                padding: 2.5rem;
                 text-align: center;
+                margin-top: 1rem;
             ">
-                <div style="font-size:3rem; margin-bottom:1rem;">🚫</div>
+                <div style="font-size:3.5rem; margin-bottom:1rem;">🚫</div>
                 <div style="
                     font-family: 'Playfair Display', serif;
-                    font-size: 1.4rem;
+                    font-size: 1.5rem;
                     color: #ffffff;
-                    margin-bottom: 0.5rem;
+                    margin-bottom: 0.8rem;
                 ">Not a Rice Leaf!</div>
-                <div style="color:#9a6060; font-size:0.9rem; line-height:1.6;">
+                <div style="color:#9a6060; font-size:0.9rem; line-height:1.7;">
                     This image doesn't appear to be a rice leaf.<br>
                     Please upload a clear photo of a rice leaf.<br><br>
-                    <span style="color:#4a5e4a;">
-                    Green content detected: {green_ratio*100:.1f}%
-                    (minimum 15% required)
+                    <span style="color:#4a5e4a; font-size:0.8rem;">
+                        Green content detected: {green_ratio*100:.1f}%
+                        &nbsp;|&nbsp; Minimum required: 15%
                     </span>
                 </div>
             </div>
             """, unsafe_allow_html=True)
 
         else:
+            # ── Predict ──
             with st.spinner('🔍 Analyzing...'):
                 preds      = model.predict(img_input, verbose=0)
                 pred_idx   = np.argmax(preds[0])
